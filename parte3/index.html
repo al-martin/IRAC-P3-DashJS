@@ -1,7 +1,7 @@
 <html>
 
 <head>
-    <title>IRAC P3 Parte 2</title>
+    <title>IRAC P3 Parte 3</title>
 </head>
 
 <script src="http://cdn.dashjs.org/latest/dash.all.min.js"></script>
@@ -20,7 +20,7 @@
     function init(){
         var video,
         player,
-        mpd_url = "/public/output/stream.mpd";
+        mpd_url = "./output/stream.mpd";
         video = document.querySelector("video");
         player = dashjs.MediaPlayer().create();
         player.setProtectionData(protData);
@@ -48,7 +48,7 @@
 </script>
 
 <body>
-    <h1>IRAC P3 Parte 2</h1>
+    <h1>IRAC P3 Parte 3</h1>
     <div class="code">
         <video class="dashjs-player" autoplay controls preload="auto" muted>
         </video>
