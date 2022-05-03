@@ -1,52 +1,11 @@
 <html>
 
 <head>
-    <title>IRAC P3 Parte 3</title>
+    <title>IRAC P3 Parte 4</title>
 </head>
 
 <script src="http://cdn.dashjs.org/latest/dash.all.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js"></script>
-
-<script>
-    const protData = {
-        "org.w3.clearkey": {
-            "clearkeys": {
-                "oW5AK5BW43HzbTSKpiu3SQ": "hyN9IKGfWKdAwFaE5pm0qg"
-            }
-        }
-    };
-    document.addEventListener("DOMContentLoaded", function () {
-        init();
-    });
-    function init() {
-        var video,
-            player,
-            mpd_url = "./output/stream.mpd";
-        video = document.querySelector("video");
-        player = dashjs.MediaPlayer().create();
-        player.setProtectionData(protData);
-        player.initialize(video, mpd_url, true);
-        player.on(dashjs.MediaPlayer.events["PLAYBACK_ENDED"], function () {
-            clearInterval(eventPoller);
-        });
-        var eventPoller = setInterval(function () {
-            var streamInfo = player.getActiveStream().getStreamInfo();
-            var dashMetrics = player.getDashMetrics();
-            var dashAdapter = player.getDashAdapter();
-            if (dashMetrics && streamInfo) {
-                const periodIdx = streamInfo.index;
-                var repSwitch = dashMetrics.getCurrentRepresentationSwitch('video', true);
-                var bufferLevel = dashMetrics.getCurrentBufferLevel('video', true);
-                var bitrate = repSwitch ? Math.round(dashAdapter.
-                    getBandwidthForRepresentation(repSwitch.to,
-                        periodIdx) / 1000) : NaN;
-                document.getElementById('buffer').innerText = bufferLevel + " secs";
-                document.getElementById('bitrate').innerText = bitrate + " Kbps";
-                document.getElementById('representation').innerText = repSwitch.to;
-            }
-        }, 500);
-    }
-</script>
 
 <body>
     <h1>IRAC P3 Parte 3</h1>
@@ -59,44 +18,141 @@
         <p>Video Buffer: <span id="buffer"></span> seconds</p>
         <p>Video Representation: <span id="representation"></span></p>
     </div>
-    <canvas id="myChart" width="400" height="400"></canvas>
+    <div style="width:1000px; height:600px">
+        <canvas id="myChart"></canvas>
+    </div>
     <script>
-        const ctx = document.getElementById('myChart').getContext('2d');
-        const myChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: ['Red', 'Blue', 'Yellow', 'Green', 'Purple', 'Orange'],
-                datasets: [{
-                    label: '# of Votes',
-                    data: [12, 19, 3, 5, 2, 3],
-                    backgroundColor: [
-                        'rgba(255, 99, 132, 0.2)',
-                        'rgba(54, 162, 235, 0.2)',
-                        'rgba(255, 206, 86, 0.2)',
-                        'rgba(75, 192, 192, 0.2)',
-                        'rgba(153, 102, 255, 0.2)',
-                        'rgba(255, 159, 64, 0.2)'
-                    ],
-                    borderColor: [
-                        'rgba(255, 99, 132, 1)',
-                        'rgba(54, 162, 235, 1)',
-                        'rgba(255, 206, 86, 1)',
-                        'rgba(75, 192, 192, 1)',
-                        'rgba(153, 102, 255, 1)',
-                        'rgba(255, 159, 64, 1)'
-                    ],
-                    borderWidth: 1
-                }]
+        var graphBitrate = new Array();
+        var graphBuffer = new Array();
+        var graphTime = new Array();
+        var myChart;
+        var options = {
+            animation: {
+                duration: 0
             },
-            options: {
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
+            elements: {
+                rectangle: {
+                    borderWidth: 2
+                }
+            },
+            layout: {
+                padding: 0
+            },
+            legend: {
+                display: true,
+                labels: {
+                    boxWidth: 16
+                }
+            },
+            maintainAspectRatio: false,
+            responsive: true,
+            scales: {
+                left: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                },
+                right: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+
+                    // grid line settings
+                    grid: {
+                        drawOnChartArea: false, // only want the grid lines for one axis to show up
+                    },
+                },
+
+            },
+            title: {
+                display: false
+            },
+            tooltips: {
+                intersect: false,
+                mode: "index",
+                position: "nearest",
+                callbacks: {}
+            }
+        };
+        var data = {
+            datasets: [
+                {
+                    backgroundColor: "rgb(156, 39, 176)",
+                    borderColor: "rgb(156, 39, 176)",
+                    fill: false,
+                    data: graphBitrate,
+                    id: "amount",
+                    label: "Bitrate (kbps)",
+                    yAxisID: "left"
+                },
+                {
+                    backgroundColor: "rgb(39, 176, 200)",
+                    borderColor: "rgb(39, 176, 200)",
+                    fill: false,
+                    data: graphBuffer,
+                    id: "amount",
+                    label: "Buffer level (s)",
+                    yAxisID: "right"
+
+                }
+            ],
+            labels: graphTime
+        };
+        const protData = {
+            "org.w3.clearkey": {
+                "clearkeys": {
+                    "oW5AK5BW43HzbTSKpiu3SQ": "hyN9IKGfWKdAwFaE5pm0qg"
                 }
             }
+        };
+        document.addEventListener("DOMContentLoaded", function () {
+            init();
         });
+        function init() {
+            var video,
+                player,
+                mpd_url = "./output/stream.mpd";
+            video = document.querySelector("video");
+            player = dashjs.MediaPlayer().create();
+            player.setProtectionData(protData);
+            player.initialize(video, mpd_url, true);
+            player.on(dashjs.MediaPlayer.events["PLAYBACK_ENDED"], function () {
+                clearInterval(eventPoller);
+            });
+            var eventPoller = setInterval(function () {
+                var streamInfo = player.getActiveStream().getStreamInfo();
+                var dashMetrics = player.getDashMetrics();
+                var dashAdapter = player.getDashAdapter();
+                if (dashMetrics && streamInfo) {
+                    const periodIdx = streamInfo.index;
+                    var repSwitch = dashMetrics.getCurrentRepresentationSwitch('video', true);
+                    var bufferLevel = dashMetrics.getCurrentBufferLevel('video', true);
+                    var bitrate = repSwitch ? Math.round(dashAdapter.
+                        getBandwidthForRepresentation(repSwitch.to,
+                            periodIdx) / 1000) : NaN;
+                    document.getElementById('buffer').innerText = bufferLevel + " secs";
+                    document.getElementById('bitrate').innerText = bitrate + " Kbps";
+                    document.getElementById('representation').innerText = repSwitch.to;
+                    graphBitrate.push(bitrate);
+                    graphBuffer.push(bufferLevel);
+                    graphTime.push(new Date().getHours() + ":" + new Date().getMinutes() + ":" + new Date().getSeconds() + ":" + new Date().getMilliseconds());
+                    const ctx = document.getElementById('myChart').getContext('2d');
+                    if (myChart) {
+                        myChart.destroy();
+                    }
+                    myChart = new Chart(ctx, {
+                        type: 'line',
+                        data,
+                        options
+                    });
+
+                    //console.log(graphData);
+                    //console.log(graphTime);
+                }
+            }, 500);
+        }
     </script>
+
 </body>
 
 </html>
